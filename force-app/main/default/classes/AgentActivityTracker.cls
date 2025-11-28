@@ -10,7 +10,7 @@ public class AgentActivityTracker {
         List<Case> casesToUpdate = new List<Case>();
         Set<Id> caseIds = new Set<Id>();
 
-        if(UserInfo.getProfileId() == systemAdminProfileId || UserInfo.getName() == 'Platform Integration User'){
+        if(UserInfo.getProfileId() == systemAdminProfileId){
             return;
         } else {
             for(SObject eachSObject : newValues){
