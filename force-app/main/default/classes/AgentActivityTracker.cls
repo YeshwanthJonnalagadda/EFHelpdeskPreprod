@@ -10,29 +10,31 @@ public class AgentActivityTracker {
         List<Case> casesToUpdate = new List<Case>();
         Set<Id> caseIds = new Set<Id>();
 
-        if(UserInfo.getProfileId() == systemAdminProfileId){
-            return;
-        } else {
-            for(SObject eachSObject : newValues){
-                if(eachSObject.getSObjectType() == Case.getSObjectType()){
+        for(SObject eachSObject : newValues){
+            if(eachSObject.getSObjectType() == Case.getSObjectType()){
+                if(trigger.operationType == TriggerOperation.BEFORE_INSERT || (trigger.operationType <> TriggerOperation.BEFORE_UPDATE && UserInfo.getProfileId() <> systemAdminProfileId)){
                     Case eachCase = (Case)eachSObject;
                     eachCase.Last_activity_date__c = DateTime.now();
                     eachCase.Last_activity_by__c = UserInfo.getUserId();
-                } else
+                }                
+            } else
 
-                if(eachSObject.getSObjectType() == EmailMessage.getSObjectType()){
+            if(eachSObject.getSObjectType() == EmailMessage.getSObjectType()){
+                if(UserInfo.getProfileId() <> systemAdminProfileId){
                     EmailMessage eachEmailMessage = (EmailMessage)eachSObject;
                     if(eachEmailMessage.ParentId.getSobjectType() == Case.getSObjectType()){
                         caseIds.add(eachEmailMessage.ParentId);
                     }
-                } else 
+                }               
+            } else 
 
-                if(eachSObject.getSObjectType() == FeedItem.getSObjectType()){
+            if(eachSObject.getSObjectType() == FeedItem.getSObjectType()){
+                if(UserInfo.getProfileId() <> systemAdminProfileId){
                     FeedItem eachFeedItem = (FeedItem)eachSObject;
                     if(eachFeedItem.ParentId.getSobjectType() == Case.getSObjectType()){
                         caseIds.add(eachFeedItem.ParentId);
                     }
-                }
+                } 
             }
         }
 

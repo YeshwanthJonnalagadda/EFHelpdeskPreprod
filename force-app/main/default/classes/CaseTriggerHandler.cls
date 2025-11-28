@@ -59,6 +59,8 @@ public class CaseTriggerHandler {
         Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
         List<Case> efAmsCases = new List<Case>();
 
+        AgentActivityTracker.updateActivityDate(caseRecordList);
+        
         for(Case eachCase:caseRecordList){
             //EF AMS
             if(eachCase.RecordTypeId != null && amsRecordTypeIds.contains(eachCase.RecordTypeId)){
