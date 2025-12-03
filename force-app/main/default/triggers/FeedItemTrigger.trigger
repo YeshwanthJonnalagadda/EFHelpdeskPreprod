@@ -1,5 +1,3 @@
-trigger FeedItemTrigger on FeedItem (after insert) {
-    if(trigger.isAfter && trigger.isInsert){
-        AgentActivityTracker.updateActivityDate(trigger.new);
-    }
+trigger FeedItemTrigger on FeedItem (before insert, after insert, before update, after update, before delete, after delete, after undelete) {
+    new FeedItemTriggerHandler().run();
 }

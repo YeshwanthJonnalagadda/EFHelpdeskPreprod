@@ -1,6 +1,3 @@
-trigger EmailMessageTrigger on EmailMessage (after insert) {
-    if(trigger.isAfter && trigger.isInsert){
-        AgentActivityTracker.updateActivityDate(trigger.new);
-    }
-
+trigger EmailMessageTrigger on EmailMessage (before insert, after insert, before update, after update, before delete, after delete, after undelete) {
+    new EmailMessageTriggerHandler().run();
 }
