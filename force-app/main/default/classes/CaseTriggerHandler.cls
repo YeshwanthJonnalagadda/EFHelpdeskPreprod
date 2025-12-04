@@ -1,18 +1,37 @@
-public class CaseTriggerHandler {
+public class CaseTriggerHandler extends TriggerHandler {
     
     private static List<RecordType> getAMSrecordTypeIds(){
         List<RecordType> amsRecordTypes = [Select Id from RecordType where DeveloperName IN('AMS_Ticket','AMS_Service_Request','Enhancement_Request')];
         return amsRecordTypes;
     }
     
-    public static void handleAfterInsert(List<Case> caseRecordList) {
+    //Handle before insert
+    public override void beforeInsert() {
+        Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
+        List<Case> efAmsCases = new List<Case>();
+
+        AgentActivityTracker.updateActivityDate(Trigger.new);
+        
+        for(Case eachCase:(List<Case>)Trigger.new){
+            //EF AMS
+            if(eachCase.RecordTypeId != null && amsRecordTypeIds.contains(eachCase.RecordTypeId)){
+                efAmsCases.add(eachCase);
+            }
+        }
+        if(efAmsCases.size() > 0){
+            EfAmsCaseTriggerHelper.calculateSLORemainingTime(efAmsCases);
+        }
+    }
+
+    //Handle after insert
+    public override void afterInsert() {
         RecordType bpoRecordType = [Select Id from RecordType where DeveloperName='EF_BPO_Ticket'];
         Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
 
         List<Case> efBpoCases = new List<Case>();
         List<Case> efAmsCases = new List<Case>();
 
-        for(Case eachCase:caseRecordList){
+        for(Case eachCase:(List<Case>)Trigger.new){
             //EF BPO
             if(eachCase.RecordTypeId != null && eachCase.RecordTypeId == bpoRecordType.Id){
                 efBpoCases.add(eachCase);
@@ -29,15 +48,37 @@ public class CaseTriggerHandler {
             EfAmsCaseTriggerHelper.handleSLARecords(efAmsCases, null);
         }
     }
+
+    //Handle before update
+    public override void beforeUpdate() {
+        Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
+        List<Case> efAmsCases = new List<Case>();
+
+        CommonCaseTriggerHelper.calculateNextActionDate((List<Case>)Trigger.new, (Map<Id,Case>)Trigger.oldMap);
+        AgentActivityTracker.updateActivityDate(Trigger.new);
+
+        for(Case eachCase:(List<Case>)Trigger.new){
+            //EF AMS
+            if(eachCase.RecordTypeId != null && amsRecordTypeIds.contains(eachCase.RecordTypeId)){
+                efAmsCases.add(eachCase);
+            }
+        }
+        if(efAmsCases.size() > 0){
+            EfAmsCaseTriggerHelper.calculateSLORemainingTime(efAmsCases);
+            EfAmsCaseTriggerHelper.updateStatusChangedDate(efAmsCases, (Map<Id,Case>)Trigger.oldMap);
+            TicketHistoryHandler.trackTicketFieldChanges(efAmsCases, (Map<Id,Case>)Trigger.oldMap);
+        }
+    }
     
-    public static void handleAfterUpdate(List<Case> caseRecordList, Map<Id, Case> oldCaseMap) {
+    //handle after update
+    public override void afterUpdate() {
         RecordType bpoRecordType = [Select Id from RecordType where DeveloperName='EF_BPO_Ticket'];
         Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
         
         List<Case> efBpoCases = new List<Case>();
         List<Case> efAmsCases = new List<Case>();
 
-        for(Case eachCase:caseRecordList){
+        for(Case eachCase:(List<Case>)Trigger.new){
             //EF BPO
             if(eachCase.RecordTypeId != null && eachCase.RecordTypeId == bpoRecordType.Id){
                 efBpoCases.add(eachCase);
@@ -48,48 +89,11 @@ public class CaseTriggerHandler {
             }
         }
         if(efBpoCases.size() > 0){
-            EfBpoCaseTriggerHelper.handleAfterUpdate(efBpoCases,oldCaseMap);
+            EfBpoCaseTriggerHelper.handleAfterUpdate(efBpoCases, (Map<Id,Case>)Trigger.oldMap);
         }
         if(efAmsCases.size() > 0){
-            EfAmsCaseTriggerHelper.handleSLARecords(efAmsCases, oldCaseMap);
+            EfAmsCaseTriggerHelper.handleSLARecords(efAmsCases, (Map<Id,Case>)Trigger.oldMap);
         }
     }
-    
-    public static void handleBeforeInsert(List<Case> caseRecordList) {
-        Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
-        List<Case> efAmsCases = new List<Case>();
 
-        AgentActivityTracker.updateActivityDate(caseRecordList);
-        
-        for(Case eachCase:caseRecordList){
-            //EF AMS
-            if(eachCase.RecordTypeId != null && amsRecordTypeIds.contains(eachCase.RecordTypeId)){
-                efAmsCases.add(eachCase);
-            }
-        }
-        if(efAmsCases.size() > 0){
-            EfAmsCaseTriggerHelper.calculateSLORemainingTime(efAmsCases);
-        }
-    }
-    
-    public static void handleBeforeUpdate(List<Case> caseRecordList, Map<Id, Case> oldCaseMap) {
-        Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
-        List<Case> efAmsCases = new List<Case>();
-
-        CommonCaseTriggerHelper.calculateNextActionDate(caseRecordList, oldCaseMap);
-        AgentActivityTracker.updateActivityDate(caseRecordList);
-
-        for(Case eachCase:caseRecordList){
-            //EF AMS
-            if(eachCase.RecordTypeId != null && amsRecordTypeIds.contains(eachCase.RecordTypeId)){
-                efAmsCases.add(eachCase);
-            }
-        }
-        if(efAmsCases.size() > 0){
-            EfAmsCaseTriggerHelper.calculateSLORemainingTime(efAmsCases);
-            EfAmsCaseTriggerHelper.updateStatusChangedDate(efAmsCases, oldCaseMap);
-            TicketHistoryHandler.trackTicketFieldChanges(efAmsCases, oldCaseMap);
-        }
-    }
-    
 }
