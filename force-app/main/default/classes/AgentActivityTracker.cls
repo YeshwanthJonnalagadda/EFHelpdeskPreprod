@@ -12,7 +12,7 @@ public class AgentActivityTracker {
 
         for(SObject eachSObject : newValues){
             if(eachSObject.getSObjectType() == Case.getSObjectType()){
-                if(trigger.operationType == TriggerOperation.BEFORE_INSERT || (trigger.operationType <> TriggerOperation.BEFORE_UPDATE && UserInfo.getProfileId() <> systemAdminProfileId)){
+                if(trigger.operationType == TriggerOperation.BEFORE_INSERT || (trigger.operationType == TriggerOperation.BEFORE_UPDATE && UserInfo.getProfileId() <> systemAdminProfileId)){
                     Case eachCase = (Case)eachSObject;
                     eachCase.Last_activity_date__c = DateTime.now();
                     eachCase.Last_activity_by__c = UserInfo.getUserId();
