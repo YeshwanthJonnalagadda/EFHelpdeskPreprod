@@ -31,6 +31,8 @@ public class CaseTriggerHandler extends TriggerHandler {
         List<Case> efBpoCases = new List<Case>();
         List<Case> efAmsCases = new List<Case>();
 
+        CommonCaseTriggerHelper.handleTicketContactRoles((List<Case>)Trigger.new, null);
+
         for(Case eachCase:(List<Case>)Trigger.new){
             //EF BPO
             if(eachCase.RecordTypeId != null && eachCase.RecordTypeId == bpoRecordType.Id){
@@ -77,6 +79,8 @@ public class CaseTriggerHandler extends TriggerHandler {
         
         List<Case> efBpoCases = new List<Case>();
         List<Case> efAmsCases = new List<Case>();
+
+        CommonCaseTriggerHelper.handleTicketContactRoles((List<Case>)Trigger.new, (Map<Id,Case>)Trigger.oldMap);
 
         for(Case eachCase:(List<Case>)Trigger.new){
             //EF BPO

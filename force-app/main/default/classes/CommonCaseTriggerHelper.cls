@@ -33,11 +33,95 @@ public with sharing class CommonCaseTriggerHelper {
                 }
             }
         }
-    } 
+    }
+    
+    public static void handleTicketContactRoles(List<Case> newValues, Map<Id,Case> oldValues){
 
-private static Datetime calculateNextActionDateHelper(String id, Datetime start, Integer days){
-    Datetime nextReminderDate = BusinessHours.add(Id, start, days*24*60*60*1000);
-    return nextReminderDate;
-}
+        List<Ticket_Contact_Role__c> newTCRs = new List<Ticket_Contact_Role__c>();
+        Set<String> oldTCRNames = new Set<String>();
+
+        for(Case eachCase: newValues){
+            if(oldValues == Null){
+                if(eachCase.SuppliedEmail != Null){
+                    Ticket_Contact_Role__c tcr = new Ticket_Contact_Role__c();
+                    tcr.Name = (eachCase.CaseNumber + '-' + eachCase.SuppliedEmail).left(80);
+                    tcr.Email__c = eachCase.SuppliedEmail;
+                    tcr.Ticket__c = eachCase.Id;
+                    tcr.Relationship_Type__c = 'Primary';
+
+                    newTCRs.add(tcr);
+                }
+                if(eachCase.CC__c != null){
+                    Set<String> setCCEmails = new Set<String>();
+                    for(String eachEmail : eachCase.CC__c.split(',')){
+                        setCCEmails.add(eachEmail.trim());
+                    }
+                    for(String eachCCEmail:setCCEmails){
+                        Ticket_Contact_Role__c tcr = new Ticket_Contact_Role__c();
+                        tcr.Name = (eachCase.CaseNumber + '-' + eachCCEmail).left(80);
+                        tcr.Email__c = eachCCEmail;
+                        tcr.Ticket__c = eachCase.Id;
+                        tcr.Relationship_Type__c = 'Secondary';
+
+                        newTCRs.add(tcr);
+                    }
+                }
+            } 
+            else if(oldValues != Null){
+                if(eachCase.SuppliedEmail != oldValues.get(eachCase.Id).SuppliedEmail){
+                    oldTCRNames.add(eachCase.CaseNumber + '-' + oldValues.get(eachCase.Id).SuppliedEmail);
+
+                    if(eachCase.SuppliedEmail != Null){
+                        Ticket_Contact_Role__c tcr = new Ticket_Contact_Role__c();
+                        tcr.Name = (eachCase.CaseNumber + '-' + eachCase.SuppliedEmail).left(80);
+                        tcr.Email__c = eachCase.SuppliedEmail;
+                        tcr.Ticket__c = eachCase.Id;
+                        tcr.Relationship_Type__c = 'Primary'; 
+
+                        newTCRs.add(tcr);
+                    }
+                }
+                if(eachCase.CC__C != oldValues.get(eachCase.Id).CC__c){
+                    if(oldValues.get(eachCase.Id).CC__c != Null){
+                        for(String eachEmail : oldValues.get(eachCase.Id).CC__c.split(',')){
+                            oldTCRNames.add(eachCase.CaseNumber + '-' + eachEmail.trim());
+                        }
+                    }
+                    
+                    if(eachCase.CC__c != Null){
+                        Set<String> setCCEmails = new Set<String>();
+                        for(String eachEmail : eachCase.CC__c.split(',')){
+                            setCCEmails.add(eachEmail.trim());
+                        }
+                        for(String eachCCEmail:setCCEmails){
+                            Ticket_Contact_Role__c tcr = new Ticket_Contact_Role__c();
+                            tcr.Name = (eachCase.CaseNumber + '-' + eachCCEmail).left(80);
+                            tcr.Email__c = eachCCEmail;
+                            tcr.Ticket__c = eachCase.Id;
+                            tcr.Relationship_Type__c = 'Secondary';
+
+                            newTCRs.add(tcr);
+                    }
+                    }
+                }
+            }
+        }
+
+        List<Ticket_Contact_Role__c> oldTCRs = [SELECT Id FROM Ticket_Contact_Role__c WHERE Name IN:oldTCRNames];
+
+        if(oldTCRs.size() > 0){
+            delete oldTCRs;
+        }
+
+        if(newTCRs.size() > 0){
+            insert newTCRs;
+        }
+    }
+    
+    //Helper method to calculate next action date
+    private static Datetime calculateNextActionDateHelper(String id, Datetime start, Integer days){
+        Datetime nextReminderDate = BusinessHours.add(Id, start, days*24*60*60*1000);
+        return nextReminderDate;
+    }
 
 }
