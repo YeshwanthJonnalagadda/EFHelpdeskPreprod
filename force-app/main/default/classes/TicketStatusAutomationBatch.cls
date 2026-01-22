@@ -1,31 +1,19 @@
 public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
-    private Id pendingChaserId;
-    private Id caseResolvedId;
-    private Id caseResolvedAMSId;
-    private Id caseResolvedAMSWithSurveyId;
-    private Id orgDefaultAddress;
-    private Id oracelAMSAddress;
-    private Id surveyId;
-    private Id networkId;
+
+    private Map<String, Ticket_Status_Template_Setting__mdt> recordTypeToNextActionTSTSMap = new Map<String, Ticket_Status_Template_Setting__mdt>();
 
     public TicketStatusAutomationBatch(){
-        //Fetch the email template Id's used for both AMS and Helpdesk tickets
-        this.pendingChaserId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Pending_Chase_1730203608751' LIMIT 1].Id;
-        this.caseResolvedId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Case_Resolved_Customer_Notification_1731937990245' LIMIT 1].Id;
-        this.caseResolvedAMSId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Case_Resolved_Customer_Notification_AMS_1738771845968' LIMIT 1].Id;
-        this.caseResolvedAMSWithSurveyId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Case_Resolved_Customer_Notification_AMS_with_survey_1744893104148' LIMIT 1].Id;
-        //Fetch Org Wide Email Addresses needed to set FROM address for each template
-        this.orgDefaultAddress = [SELECT Id FROM OrgWideEmailAddress WHERE address = 'ef.helpdesk.service.support@ef.com' LIMIT 1].Id;
-        this.oracelAMSAddress = [SELECT Id FROM OrgWideEmailAddress WHERE address = 'oracle.ams@ef.com' LIMIT 1].Id;
-        //Fetch Survey Id and Network Id
-        this.surveyId = [SELECT Id__c FROM customerSurveyRelatedIds__mdt WHERE DeveloperName = 'satisfactionSurveyId' LIMIT 1].Id__c;
-        this.networkId = [SELECT Id__c FROM customerSurveyRelatedIds__mdt WHERE DeveloperName = 'networkId' LIMIT 1].Id__c;
+        for(Ticket_Status_Template_Setting__mdt tsts: [SELECT Id, Record_Type__c, Next_Action__c, Org_Wide_Email_Address_Id__c, Template_Id__c, 
+                                                                Network_Id__c, Survey_Id__c FROM Ticket_Status_Template_Setting__mdt]){
+            this.recordTypeToNextActionTSTSMap.put(tsts.Record_Type__c+'-'+tsts.Next_Action__c, tsts);
+        }
     }
 
     public database.QueryLocator start(database.BatchableContext bc){
+       
         return database.getQueryLocator([SELECT Id, CaseNumber, Subject, ContactId, Status, Next_Action__c, Next_Action_DateTime__c, 
-        SuppliedEmail, Is_an_internal_requestor__c, Is_an_EF_Helpdesk_Record_Type__c, Is_an_AMS_Ticket__c, Resolution_Notes__c FROM Case 
-        WHERE Is_eligible_for_Ticket_Status_Automation__c = true AND ContactId != Null]);
+        SuppliedEmail, Is_an_EF_Helpdesk_Record_Type__c, Is_an_AMS_Ticket__c, Resolution_Notes__c, RecordType.DeveloperName FROM Case 
+        WHERE Is_eligible_for_Ticket_Status_Automation__c = true]);
     }
 
     public void execute(database.BatchableContext bc, List<Case> scope){
@@ -34,22 +22,26 @@ public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
         List<SurveyInvitation> surveyToInsert = new List<SurveyInvitation>();
 
         for(Case eachCase:scope){
-            if(eachCase.Next_Action__c == 'Send Pending Chaser' && eachCase.Status == 'Pending'){                
-                emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, pendingChaserId, orgDefaultAddress));
-                eachCase.Next_Action__c = 'Status To Resolved';
-                casesToUpdateMap.put(eachCase.Id, eachCase);
+            if(eachCase.Next_Action__c == 'Send Pending Chaser' && eachCase.Status == 'Pending'){
+
+                if(recordTypeToNextActionTSTSMap.containsKey(eachCase.RecordType.DeveloperName+'-'+eachCase.Next_Action__c)){
+                    Ticket_Status_Template_Setting__mdt tsts = recordTypeToNextActionTSTSMap.get(eachCase.RecordType.DeveloperName+'-'+eachCase.Next_Action__c);
+                    emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
+                    eachCase.Next_Action__c = 'Status To Resolved';
+                    casesToUpdateMap.put(eachCase.Id, eachCase);
+                }                
+                
 
             } else if(eachCase.Next_Action__c == 'Status To Resolved' && eachCase.Status == 'Pending'){
-                if(eachCase.Is_an_EF_Helpdesk_Record_Type__c){
-                    emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, caseResolvedId, orgDefaultAddress));
+                
+                if(recordTypeToNextActionTSTSMap.containsKey(eachCase.RecordType.DeveloperName+'-'+eachCase.Next_Action__c)){
+                    Ticket_Status_Template_Setting__mdt tsts = recordTypeToNextActionTSTSMap.get(eachCase.RecordType.DeveloperName+'-'+eachCase.Next_Action__c);
+                    if(tsts.Survey_Id__c != null && tsts.Network_Id__c != null){
+                        surveyToInsert.add(createSurveyInvitation(eachCase, tsts.Survey_Id__c, tsts.Network_Id__c));
+                    }
+                    emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
                     eachCase.Status = 'Resolved';
-                    casesToUpdateMap.put(eachCase.Id, eachCase);
-
-                } else if(eachCase.Is_an_AMS_Ticket__c){
-                    surveyToInsert.add(createSurveyInvitation(eachCase, surveyId, networkId));
-                    emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, caseResolvedAMSWithSurveyId, oracelAMSAddress));
-                    eachCase.Status = 'Resolved';
-                    eachCase.Resolution_Notes__c = 'Auto Resolved';
+                    eachCase.Resolution_Notes__c = eachCase.Is_an_AMS_Ticket__c ? 'Auto Resolved' : eachCase.Resolution_Notes__c;
                     casesToUpdateMap.put(eachCase.Id, eachCase);
                 }
 

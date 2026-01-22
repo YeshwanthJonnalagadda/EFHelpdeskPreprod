@@ -14,20 +14,6 @@ public class TicketStatusAutomationBatchTest {
         Id helpdeskRecordTypeId = [SELECT Id FROM RecordType WHERE DeveloperName = 'EF_Helpdesk_IT' LIMIT 1].Id;
         Id amsRecordTypeId = [SELECT Id FROM RecordType WHERE DeveloperName = 'AMS_Ticket' LIMIT 1].Id;
 
-        //get Template Id's
-        Id pendingChaserId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Pending_Chase_1730203608751' LIMIT 1].Id;
-        Id caseResolvedId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Case_Resolved_Customer_Notification_1731937990245' LIMIT 1].Id;
-        Id caseResolvedAMSId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Case_Resolved_Customer_Notification_AMS_1738771845968' LIMIT 1].Id;
-        Id caseResolvedAMSWithSurveyId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'Case_Resolved_Customer_Notification_AMS_with_survey_1744893104148' LIMIT 1].Id;
-
-        // Org-wide email address Id's
-        Id orgDefaultAddress = [SELECT Id FROM OrgWideEmailAddress WHERE address = 'ef.helpdesk.service.support@ef.com' LIMIT 1].Id;
-        Id oracelAMSAddress = [SELECT Id FROM OrgWideEmailAddress WHERE address = 'oracle.ams@ef.com' LIMIT 1].Id;
-        
-        // Survey and Network Id's
-        Id surveyId = [SELECT Id__c FROM customerSurveyRelatedIds__mdt WHERE DeveloperName = 'satisfactionSurveyId' LIMIT 1].Id__c;
-        Id networkId = [SELECT Id__c FROM customerSurveyRelatedIds__mdt WHERE DeveloperName = 'networkId' LIMIT 1].Id__c;
-
         // Cases:
         // 1) Pending + Send Pending Chaser -> stays Pending, Next_Action__c -> 'Status To Resolved'
         Case testCase1 = new Case(
@@ -75,7 +61,7 @@ public class TicketStatusAutomationBatchTest {
         // Set up batch instance
         Test.startTest();
         TicketStatusAutomationBatch batch = new TicketStatusAutomationBatch();
-        Database.executeBatch(batch, 5);
+        Database.executeBatch(batch, 200);
         Test.stopTest();
 
         // Reload the cases with needed fields
