@@ -3,6 +3,12 @@ public class SendAtlasTicketReminderEmailTest {
     @TestSetup
     static void makeData(){
         Id bpoRecordTypeId = [SELECT Id FROM RecordType WHERE DeveloperName = 'EF_BPO_Ticket' LIMIT 1].Id;
+        //Create Contact
+        Contact c1 = new contact(LastName = 'test1', Email='demo.test1@yahoo.com');
+        insert c1;
+        Contact c2 = new contact(LastName = 'test2', Email='demo.test1@ef.com');
+        insert c2;
+
         //Create test data for case
         Case testCase1 = new Case(
             Subject = 'Test Case1',
@@ -10,6 +16,7 @@ public class SendAtlasTicketReminderEmailTest {
             Status = 'On Hold',
             Origin = 'Email',
             SuppliedEmail = 'demo.test1@yahoo.com',
+            ContactId = c1.Id,
             RecordTypeId = bpoRecordTypeId,
             EF_BPO_Reminder_Number__c = 1,
             EF_BPO_Reminder_Date__c = Datetime.now().addHours(-1),
@@ -25,6 +32,7 @@ public class SendAtlasTicketReminderEmailTest {
             Status = 'on Hold',
             Origin = 'Email',
             SuppliedEmail = 'demo.test1@ef.com',
+            ContactId = c2.Id,
             RecordTypeId = bpoRecordTypeId,
             EF_BPO_Reminder_Number__c = 1,
             EF_BPO_Reminder_Date__c = Datetime.now().addHours(-1),

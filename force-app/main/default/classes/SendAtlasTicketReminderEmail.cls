@@ -7,8 +7,18 @@
 
 public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject> {
 
+    private List<EmailRoutingAddress> emailRoutingAddresses = new List<EmailRoutingAddress>();
+    private Id bpoAddress;
+    private Id templateId;
+
+    public SendAtlasTicketReminderEmail(){
+        this.emailRoutingAddresses = [SELECT Id, address FROM EmailRoutingAddress];
+        this.bpoAddress = [SELECT Id FROM OrgWideEmailAddress WHERE address = 'ef.bpo.service.support@ef.com' LIMIT 1].Id;
+        this.templateId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'EF_BPO_reminder_for_On_Hold_tours_Tickets_1749555977479' LIMIT 1].Id;
+    }
+
     public Database.QueryLocator start(Database.BatchableContext bc) {
-        return Database.getQueryLocator([SELECT Id, SuppliedEmail, Subject, CaseNumber, First_Name_Auto_Response__c, 
+        return Database.getQueryLocator([SELECT Id, SuppliedEmail, ContactId, Subject, CaseNumber, First_Name_Auto_Response__c, 
                                         Is_an_internal_requestor__c, EF_BPO_Reminder_Date__c, EF_BPO_Reminder_Number__c FROM Case 
                                         WHERE EF_BPO_Is_eligible_for_reminder__c = true]);
     }
@@ -21,9 +31,7 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
         }
         List<EmailMessage> allEmailMessages = [SELECT Id, ParentId, CcAddress, ToAddress, CreatedDate FROM EmailMessage 
                                                 WHERE ParentId IN:caseIds];
-        List<EmailRoutingAddress> emailRoutingAddresses = [SELECT Id, address FROM EmailRoutingAddress];
-        Id bpoAddress = [SELECT Id FROM OrgWideEmailAddress WHERE address = 'ef.bpo.service.support@ef.com' LIMIT 1].Id;
-
+        
         //Contruct emailRoutingAddress Set
         Set<String> emailRoutingAddressesSet = new Set<String>();
         for(EmailRoutingAddress eachEmailRoutingAddress: emailRoutingAddresses){
@@ -54,7 +62,7 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
             Set<String> toAddressSet = new Set<String>();
             List<String> ccAddressList = new List<String>();
             List<String> toAddressList = new List<String>();
-            if(eachCase.SuppliedEmail != Null){                
+            if(eachCase.SuppliedEmail != Null && eachCase.ContactId != Null){                
                 if(sortedcaseIdToEmailListMap.containsKey(eachCase.Id) && sortedcaseIdToEmailListMap.get(eachCase.Id).size()>0 && eachCase.Is_an_internal_requestor__c == 'TRUE'){
                     toAddressSet.addAll(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].ToAddress != null ? new List<String>(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].ToAddress.split(';')) : new List<String>());
                     ccAddressSet.addAll(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].CcAddress != null ? new List<String>(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].CcAddress.split(';')) : new List<String>());
@@ -62,54 +70,41 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
                     ccAddressSet.addAll(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].ToAddress != null ? new List<String>(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].ToAddress.split(';')) : new List<String>());
                     ccAddressSet.addAll(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].CcAddress != null ? new List<String>(sortedcaseIdToEmailListMap.get(eachCase.Id)[0].CcAddress.split(';')) : new List<String>());
                 }
+                //remove routing address from set
                 for(String eachCCAdress: ccAddressSet){
                     if(!emailRoutingAddressesSet.contains(eachCCAdress.trim().toLowerCase())){
                         ccAddressList.add(eachCCAdress.trim());
                     }
                 }
+                //remove routing address from set
                 for(String eachToAdress: toAddressSet){
                     if(!emailRoutingAddressesSet.contains(eachToAdress.trim().toLowerCase())){
                         toAddressList.add(eachToAdress.trim());
                     }
                 }
-                //If customer is an internal do not add supplied email into Toaddress list.    
-                List<String> compliedToAddresses = eachCase.Is_an_internal_requestor__c == 'TRUE'? toAddressList : new List<String>{eachCase.SuppliedEmail};
-                String formattedToken = EmailMessages.getFormattedThreadingToken(eachCase.Id);
                 
                 //check for empty recipient list
-                if(compliedToAddresses.size()>0 || ccAddressList.size()>0){
+                if(toAddressList.size()>0 || ccAddressList.size()>0){
                     //Contrust Email Message
                     Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
                     message.setWhatId(eachCase.Id);
                     message.setOrgWideEmailAddressId(bpoAddress);
-                    message.setToAddresses(compliedToAddresses);
+                    message.setToAddresses(toAddressList);
                     message.setCcAddresses(ccAddressList);
                     message.setSaveAsActivity(false);
-                    message.setSubject('Auto Reminder - '+eachCase.CaseNumber+' - '+eachCase.Subject);
-                    message.setPlainTextBody(
-                        'Dear Partner,\n\n'+
-                        'Thank you for your e-mail. We are writing to following up on request '+eachCase.CaseNumber+'.\n\n'+
-                        'We would appreciate it if you could provide an update or let us know if any further information is needed from our side to assist with resolution.\n\n'+
-                        'Looking forward to your response.\n\n'+
-                        'Thanks,\n'+
-                        'GEC Support Team\n\n\n'+
-                        formattedToken
-                    );
+                    message.setTemplateId(templateId);
+                    message.setTargetObjectId(eachCase.ContactId);
+
                     emailList.add(message);
                 }
-                Datetime reminderDate = eachCase.EF_BPO_Reminder_Date__c;
-                Decimal reminderNumber = eachCase.EF_BPO_Reminder_Number__c;
                 
-                eachCase.EF_BPO_Reminder_Number__c = reminderNumber < 3 ? reminderNumber + 1 : Null;
-                eachCase.EF_BPO_Reminder_Date__c = reminderNumber < 3 ? Datetime.now() + 7 : Null;
+                eachCase.EF_BPO_Reminder_Number__c = eachCase.EF_BPO_Reminder_Number__c < 3 ? eachCase.EF_BPO_Reminder_Number__c + 1 : Null;
+                eachCase.EF_BPO_Reminder_Date__c = eachCase.EF_BPO_Reminder_Number__c < 3 ? Datetime.now() + 7 : Null;
             
-                system.debug('Reminder Number: '+eachCase.EF_BPO_Reminder_Number__c);
-                system.debug('Reminder Date '+eachCase.EF_BPO_Reminder_Date__c);
                 casesToUpdate.add(eachCase);
             }
         }
         //Send Email messages
-        system.debug('Size of the emailList: '+emailList.size());
         if(emailList.size() > 0){
             Messaging.sendEmail(emailList);
         }
