@@ -22,7 +22,7 @@ public class ServiceLevelAgreementTriggerTest {
         // Simulate SLA records creation for removal test
         List<Service_Level_Agreement__c> slas = new List<Service_Level_Agreement__c>();
         for (Case c : cases) {
-            // Insert SLAs with dummy times; actual TimeSpent__c will be calculated by the formula
+            // Insert SLAs with dummy times and null; actual TimeSpent__c will be calculated by the formula
             slas.add(new Service_Level_Agreement__c(Case_Id__c = c.Id, Case_Status__c = 'In Progress', 
                                                      Start_Time__c = System.now().addHours(-2), 
                                                      End_Time__c = System.now()));
