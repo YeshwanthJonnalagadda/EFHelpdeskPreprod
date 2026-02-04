@@ -29,6 +29,9 @@ public class ServiceLevelAgreementTriggerTest {
             slas.add(new Service_Level_Agreement__c(Case_Id__c = c.Id, Case_Status__c = 'Open', 
                                                      Start_Time__c = System.now().addHours(-1), 
                                                      End_Time__c = System.now()));
+            slas.add(new Service_Level_Agreement__c(Case_Id__c = c.Id, Case_Status__c = 'New', 
+                                                     Start_Time__c = Null, 
+                                                     End_Time__c = System.now()));                                            
         }
         insert slas;
         

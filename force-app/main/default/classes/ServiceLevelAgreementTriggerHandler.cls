@@ -118,7 +118,7 @@ public class ServiceLevelAgreementTriggerHandler {
                         if (sla.Time_Spent__c != null && String.isNotBlank(String.valueOf(sla.Time_Spent__c))) {
                             slaResolutionTime += Decimal.valueOf(sla.Time_Spent__c);
                         }
-                    } else if (sla.Case_Status__c == 'Open') {
+                    } else if (sla.Case_Status__c == 'Open'||sla.Case_Status__c == 'New') {
                         if (sla.Time_Spent__c != null && String.isNotBlank(String.valueOf(sla.Time_Spent__c))) {
                             
                             System.debug('Time Spent ::'+sla.Time_Spent__c);
@@ -156,7 +156,7 @@ public class ServiceLevelAgreementTriggerHandler {
                     if (sla.Time_Spent__c != null && String.isNotBlank(String.valueOf(sla.Time_Spent__c))) {
                         resolutionTimeToRemove.put(sla.Case_Id__c, resolutionTimeToRemove.get(sla.Case_Id__c) + Decimal.valueOf(sla.Time_Spent__c));
                     }
-                } else if (sla.Case_Status__c == 'Open') {
+                } else if (sla.Case_Status__c == 'Open'||sla.Case_Status__c == 'New') {
                     if (!responseTimeToRemove.containsKey(sla.Case_Id__c)) {
                         responseTimeToRemove.put(sla.Case_Id__c, 0);
                     }
