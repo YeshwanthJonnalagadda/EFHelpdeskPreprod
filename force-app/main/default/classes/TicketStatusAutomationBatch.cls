@@ -42,6 +42,7 @@ public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
                     emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
                     eachCase.Status = 'Resolved';
                     eachCase.Resolution_Notes__c = eachCase.Is_an_AMS_Ticket__c ? 'Auto Resolved' : eachCase.Resolution_Notes__c;
+                    eachCase.EF_BPO_Resolved_Time__c = Datetime.now();
                     casesToUpdateMap.put(eachCase.Id, eachCase);
                 }
 
