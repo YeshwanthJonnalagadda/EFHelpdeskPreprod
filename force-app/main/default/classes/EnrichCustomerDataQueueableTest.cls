@@ -17,7 +17,7 @@ public class EnrichCustomerDataQueueableTest {
         Account acc = new Account(Name = 'EF Education First');
         insert acc;
 
-        Contact testContact = new Contact(LastName = 'Demo Test', UUID__c = 'wprocndsdjiuwqyriubcasd', accountId = acc.Id);
+        Contact testContact = new Contact(LastName = 'Demo Test', Email = 'demo.test@yahoo.com', UUID__c = 'wprocndsdjiuwqyriubcasd', accountId = acc.Id);
         insert testContact;
     }
     @isTest
