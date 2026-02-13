@@ -91,7 +91,7 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
                     message.setOrgWideEmailAddressId(bpoAddress);
                     message.setToAddresses(toAddressList);
                     message.setCcAddresses(ccAddressList);
-                    message.setSaveAsActivity(false);
+                    message.setSaveAsActivity(true);
                     message.setTemplateId(templateId);
                     message.setTargetObjectId(eachCase.ContactId);
 
