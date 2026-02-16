@@ -8,18 +8,22 @@
 public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject> {
 
     private List<EmailRoutingAddress> emailRoutingAddresses = new List<EmailRoutingAddress>();
-    private Id bpoAddress;
+    private Map<string, OrgWideEmailAddress> orgWideEmailAddressesMap = new Map<string, OrgWideEmailAddress>();
     private Id templateId;
 
     public SendAtlasTicketReminderEmail(){
         this.emailRoutingAddresses = [SELECT Id, address FROM EmailRoutingAddress];
-        this.bpoAddress = [SELECT Id FROM OrgWideEmailAddress WHERE address = 'ef.bpo.service.support@ef.com' LIMIT 1].Id;
         this.templateId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'EF_BPO_reminder_for_On_Hold_tours_Tickets_1749555977479' LIMIT 1].Id;
+
+        for(OrgWideEmailAddress eachAddress: [SELECT Id, Address FROM OrgWideEmailAddress]){
+            this.orgWideEmailAddressesMap.put(eachAddress.Address, eachAddress);
+        }
     }
 
     public Database.QueryLocator start(Database.BatchableContext bc) {
         return Database.getQueryLocator([SELECT Id, SuppliedEmail, ContactId, Subject, CaseNumber, First_Name_Auto_Response__c, 
-                                        Is_an_internal_requestor__c, EF_BPO_Reminder_Date__c, EF_BPO_Reminder_Number__c FROM Case 
+                                        Is_an_internal_requestor__c, EF_BPO_Reminder_Date__c, EF_BPO_Reminder_Number__c,
+                                        Sent_to_email_address__c FROM Case 
                                         WHERE EF_BPO_Is_eligible_for_reminder__c = true]);
     }
 
@@ -85,10 +89,11 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
                 
                 //check for empty recipient list
                 if(toAddressList.size()>0 || ccAddressList.size()>0){
+                    Id fromAddressId = eachCase.Sent_to_email_address__c != null ? orgWideEmailAddressesMap.get(eachCase.Sent_to_email_address__c).Id : orgWideEmailAddressesMap.get('ef.bpo.service.support@ef.com').Id;
                     //Contrust Email Message
                     Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
                     message.setWhatId(eachCase.Id);
-                    message.setOrgWideEmailAddressId(bpoAddress);
+                    message.setOrgWideEmailAddressId(fromAddressId);
                     message.setToAddresses(toAddressList);
                     message.setCcAddresses(ccAddressList);
                     message.setSaveAsActivity(true);
