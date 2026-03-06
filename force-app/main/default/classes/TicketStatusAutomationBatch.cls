@@ -1,3 +1,9 @@
+/*
+    @Author: Yeshwanth Jonnalagadda
+    @Date: 04/03/2026
+    @Description: Added resolution code to AMS tickets
+*/
+
 public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
 
     private Map<String, Ticket_Status_Template_Setting__mdt> recordTypeToNextActionTSTSMap = new Map<String, Ticket_Status_Template_Setting__mdt>();
@@ -11,9 +17,10 @@ public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
 
     public database.QueryLocator start(database.BatchableContext bc){
        
-        return database.getQueryLocator([SELECT Id, CaseNumber, Subject, ContactId, Status, Next_Action__c, Next_Action_DateTime__c, 
-        SuppliedEmail, Is_an_EF_Helpdesk_Record_Type__c, Is_an_AMS_Ticket__c, Resolution_Notes__c, RecordType.DeveloperName FROM Case 
-        WHERE Is_eligible_for_Ticket_Status_Automation__c = true]);
+        return database.getQueryLocator([SELECT Id, CaseNumber, Subject, ContactId, Status, Next_Action__c, 
+        Next_Action_DateTime__c, SuppliedEmail, Is_an_EF_Helpdesk_Record_Type__c, Is_an_AMS_Ticket__c, 
+        Resolution_Notes__c, Resolution_Code_AMS__c, RecordType.DeveloperName 
+        FROM Case WHERE Is_eligible_for_Ticket_Status_Automation__c = true]);
     }
 
     public void execute(database.BatchableContext bc, List<Case> scope){
@@ -41,7 +48,8 @@ public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
                     }
                     emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
                     eachCase.Status = 'Resolved';
-                    eachCase.Resolution_Notes__c = eachCase.Is_an_AMS_Ticket__c ? 'Auto Resolved' : eachCase.Resolution_Notes__c;
+                    eachCase.Resolution_Notes__c = eachCase.Is_an_AMS_Ticket__c && eachCase.Resolution_Notes__c == Null ? 'Auto Resolved' : eachCase.Resolution_Notes__c;
+                    eachCase.Resolution_Code_AMS__c = eachCase.Is_an_AMS_Ticket__c && eachCase.Resolution_Code_AMS__c == Null ? 'Auto-Resolved' : eachCase.Resolution_Code_AMS__c;
                     eachCase.EF_BPO_Resolved_Time__c = Datetime.now();
                     casesToUpdateMap.put(eachCase.Id, eachCase);
                 }
