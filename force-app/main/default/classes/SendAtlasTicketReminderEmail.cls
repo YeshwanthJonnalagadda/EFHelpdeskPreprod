@@ -2,6 +2,7 @@
 *   AIM: To send the reminder to on Hold Atlas tickets. 
 *   include all the addresses from initial email on case. 
 *   inaddition to supplied email.
+*   Replaced lightning template with classic
 */
 
 
@@ -13,7 +14,7 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
 
     public SendAtlasTicketReminderEmail(){
         this.emailRoutingAddresses = [SELECT Id, address FROM EmailRoutingAddress];
-        this.templateId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'EF_BPO_reminder_for_On_Hold_tours_Tickets_1749555977479' LIMIT 1].Id;
+        this.templateId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'EF_BPO_reminder_for_On_Hold_tours_Tickets_Classic' LIMIT 1].Id;
 
         for(OrgWideEmailAddress eachAddress: [SELECT Id, Address FROM OrgWideEmailAddress]){
             this.orgWideEmailAddressesMap.put(eachAddress.Address, eachAddress);
@@ -104,7 +105,7 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
                 }
                 
                 eachCase.EF_BPO_Reminder_Number__c = eachCase.EF_BPO_Reminder_Number__c < 3 ? eachCase.EF_BPO_Reminder_Number__c + 1 : Null;
-                eachCase.EF_BPO_Reminder_Date__c = eachCase.EF_BPO_Reminder_Number__c < 3 ? Datetime.now() + 7 : Null;
+                eachCase.EF_BPO_Reminder_Date__c = eachCase.EF_BPO_Reminder_Number__c <= 3 ? Datetime.now() + 7 : Null;
             
                 casesToUpdate.add(eachCase);
             }
