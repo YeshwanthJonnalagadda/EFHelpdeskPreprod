@@ -9,11 +9,9 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
 
     private List<EmailRoutingAddress> emailRoutingAddresses = new List<EmailRoutingAddress>();
     private Map<string, OrgWideEmailAddress> orgWideEmailAddressesMap = new Map<string, OrgWideEmailAddress>();
-    private Id templateId;
 
     public SendAtlasTicketReminderEmail(){
         this.emailRoutingAddresses = [SELECT Id, address FROM EmailRoutingAddress];
-        this.templateId = [SELECT Id FROM EmailTemplate WHERE DeveloperName = 'EF_BPO_reminder_for_On_Hold_tours_Tickets_1749555977479' LIMIT 1].Id;
 
         for(OrgWideEmailAddress eachAddress: [SELECT Id, Address FROM OrgWideEmailAddress]){
             this.orgWideEmailAddressesMap.put(eachAddress.Address, eachAddress);
@@ -33,7 +31,8 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
         for(Case c:cases){
             caseIds.add(c.Id);
         }
-        List<EmailMessage> allEmailMessages = [SELECT Id, ParentId, CcAddress, ToAddress, CreatedDate FROM EmailMessage 
+        List<EmailMessage> allEmailMessages = [SELECT Id, ParentId, CcAddress, ToAddress, FromAddress, 
+                                                CreatedDate, HtmlBody, TextBody, Subject FROM EmailMessage 
                                                 WHERE ParentId IN:caseIds];
         
         //Contruct emailRoutingAddress Set
@@ -90,6 +89,24 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
                 //check for empty recipient list
                 if(toAddressList.size()>0 || ccAddressList.size()>0){
                     Id fromAddressId = eachCase.Sent_to_email_address__c != null ? orgWideEmailAddressesMap.get(eachCase.Sent_to_email_address__c).Id : orgWideEmailAddressesMap.get('ef.bpo.service.support@ef.com').Id;
+                    String threadToken = EmailMessages.getFormattedThreadingToken(eachCase.Id);
+                    EmailMessage latestEmail = sortedcaseIdToEmailListMap.get(eachCase.Id)[sortedcaseIdToEmailListMap.get(eachCase.Id).size()-1];
+                    String subject  =   'Auto reminder '+eachCase.EF_BPO_Reminder_Number__c+': '+eachCase.CaseNumber+' - '+eachCase.Subject;
+                    String htmlBody =   '<br/>Dear Partner,<br/>' + 
+                                        '<br/>We are writing to following up on request '+eachCase.CaseNumber+'.<br/>' +
+                                        '<br/>We would appreciate if you could provide an update or let us know if any further information is needed from our side to assist with resolution.<br/>' +
+                                        '<br/>Looking forward to your response.<br/><br/>' +
+                                        'Thanks,<br/>' +
+                                        'GEC Support Team<br/>' +
+                                        '<br/>' +
+                                        '--------------------------------------------------Original Email -----------------------------------------------------------<br/><br/>' +
+                                        '<b>From: </b>'+latestEmail.FromAddress+'<br/>' +
+                                        '<b>Sent: </b>'+latestEmail.CreatedDate+'<br/>' +
+                                        '<b>To: </b>'+latestEmail.ToAddress+'<br/>' +
+                                        '<b>Subject: </b>'+latestEmail.Subject+'<br /><br/>' +
+                                        +latestEmail.HtmlBody+'<br/>'+
+                                        +threadToken;
+
                     //Contrust Email Message
                     Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
                     message.setWhatId(eachCase.Id);
@@ -97,7 +114,8 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
                     message.setToAddresses(toAddressList);
                     message.setCcAddresses(ccAddressList);
                     message.setSaveAsActivity(true);
-                    message.setTemplateId(templateId);
+                    message.setHtmlBody(htmlBody);
+                    message.setSubject(subject);
                     message.setTargetObjectId(eachCase.ContactId);
 
                     emailList.add(message);
