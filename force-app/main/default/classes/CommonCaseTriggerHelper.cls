@@ -120,7 +120,8 @@ public with sharing class CommonCaseTriggerHelper {
     
     //Helper method to calculate next action date
     private static Datetime calculateNextActionDateHelper(String id, Datetime start, Integer days){
-        Datetime nextReminderDate = BusinessHours.add(Id, start, days*24*60*60*1000);
+        Long millis = days*24*60*60*1000L;
+        Datetime nextReminderDate = BusinessHours.add(Id, start, millis);
         return nextReminderDate;
     }
 
