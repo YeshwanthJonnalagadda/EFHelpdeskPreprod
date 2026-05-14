@@ -1,7 +1,5 @@
 /*
- * @Purpose: ServiceLevelAgreementTrigger handler to calculate Time Spent, Ticket SLO Response and Resolution Time
- * 04/02/2026 - Yeshwanth
-  - Added New status to SLO response time calculation. 
+ * @Purpose: ServiceLevelAgreementTrigger handler to calculate Time Spent, Ticket SLO Response and Resolution Time 
  * */
 
 public class ServiceLevelAgreementTriggerHandler {
