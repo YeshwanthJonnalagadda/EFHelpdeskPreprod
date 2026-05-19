@@ -7,7 +7,7 @@ public class TicketStatusAutomationBatchTest {
         // Create Contact record
         Contact testContact = new Contact(FirstName = 'Test', LastName = 'User', Email = 'testuser@example.com');
         insert testContact;
-        Contact testContact2 = new Contact(FirstName = 'Test', LastName = 'User 2', Email = 'testuser2@ef.com');
+        Contact testContact2 = new Contact(FirstName = 'Test', LastName = 'User 2', Email = 'testuser2@ef.com', EmailBouncedDate = System.Now(), EmailBouncedReason = 'Test');
         insert testContact2;
 
         //Get RecordType Id's for Helpdesk and AMS

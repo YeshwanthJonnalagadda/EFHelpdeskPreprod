@@ -2,16 +2,23 @@
     @Author: Yeshwanth Jonnalagadda
     @Date: 04/03/2026
     @Description: Added resolution code to AMS tickets
+    @Date: 18/05/2026
+    @Description: Added bounced email list and if condition to filter them
 */
 
 public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
 
     private Map<String, Ticket_Status_Template_Setting__mdt> recordTypeToNextActionTSTSMap = new Map<String, Ticket_Status_Template_Setting__mdt>();
+    private List<String> bouncedContactIds = new List<String>();
 
     public TicketStatusAutomationBatch(){
         for(Ticket_Status_Template_Setting__mdt tsts: [SELECT Id, Record_Type__c, Next_Action__c, Org_Wide_Email_Address_Id__c, Template_Id__c, 
                                                                 Network_Id__c, Survey_Id__c FROM Ticket_Status_Template_Setting__mdt]){
             this.recordTypeToNextActionTSTSMap.put(tsts.Record_Type__c+'-'+tsts.Next_Action__c, tsts);
+        }
+
+        for(Contact con : [SELECT Id, Email FROM Contact WHERE IsEmailBounced = true]){
+            this.bouncedContactIds.add(con.Id);
         }
     }
 
@@ -33,7 +40,9 @@ public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
 
                 if(recordTypeToNextActionTSTSMap.containsKey(eachCase.RecordType.DeveloperName+'-'+eachCase.Next_Action__c)){
                     Ticket_Status_Template_Setting__mdt tsts = recordTypeToNextActionTSTSMap.get(eachCase.RecordType.DeveloperName+'-'+eachCase.Next_Action__c);
-                    emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
+                    if(!bouncedContactIds.contains(eachCase.ContactId)){
+                        emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
+                    }                    
                     eachCase.Next_Action__c = 'Status To Resolved';
                     casesToUpdateMap.put(eachCase.Id, eachCase);
                 }                
@@ -46,7 +55,9 @@ public class TicketStatusAutomationBatch implements database.Batchable<sObject>{
                     if(tsts.Survey_Id__c != null && tsts.Network_Id__c != null){
                         surveyToInsert.add(createSurveyInvitation(eachCase, tsts.Survey_Id__c, tsts.Network_Id__c));
                     }
-                    emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
+                    if(!bouncedContactIds.contains(eachCase.ContactId)){
+                        emailsToSend.add(emailHelperMethod(eachCase.ContactId, eachCase.Id, tsts.Template_Id__c, tsts.Org_Wide_Email_Address_Id__c));
+                    }
                     eachCase.Status = 'Resolved';
                     eachCase.Resolution_Notes__c = eachCase.Is_an_AMS_Ticket__c && eachCase.Resolution_Notes__c == Null ? 'Auto Resolved' : eachCase.Resolution_Notes__c;
                     eachCase.Resolution_Code_AMS__c = eachCase.Is_an_AMS_Ticket__c && eachCase.Resolution_Code_AMS__c == Null ? 'Auto-Resolved' : eachCase.Resolution_Code_AMS__c;
