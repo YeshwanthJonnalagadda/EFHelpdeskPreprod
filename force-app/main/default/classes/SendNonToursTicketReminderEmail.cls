@@ -56,10 +56,11 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
             sortedcaseIdToEmailListMap.put(caseId, emailList);
         }
         
-        List<String> ccAddressList = new List<String>();
+        
         List<Messaging.SingleEmailMessage> emailList = new List<Messaging.SingleEmailMessage>();
         List<Case> casesToUpdate = new List<Case>();
         for(Case eachCase: cases){
+            List<String> ccAddressList = new List<String>();
             Id fromAddressId = orgWideEmailAddressesMap.get('ef.bpo.service.support@ef.com').Id;
             String fmEamilAddress = companyCodeFMEmailMap.get(eachCase.EF_BPO_Business_Unit__c);
             string agentsName = eachCase.Agents_First_Name__c <> Null ? eachCase.Agents_First_Name__c : 'GEC Support Team';
