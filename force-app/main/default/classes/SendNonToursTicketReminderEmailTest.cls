@@ -25,6 +25,25 @@ public class SendNonToursTicketReminderEmailTest {
             EF_BPO_Request_Details__c = 'Missing PO'
         );
         insert testCase1;
+        
+        Case testCase2 = new Case(
+            Subject = 'Test Case2',
+            Description = 'Test Case2',
+            Status = 'Pending',
+            Origin = 'Form',
+            EF_BPO_Product__c = 'Central Finance',
+            EF_BPO_Business_Unit__c = 'CH007',
+            SuppliedEmail = 'demo.test2@yahoo.com',
+            ContactId = c1.Id,
+            RecordTypeId = bpoRecordTypeId,
+            EF_BPO_Reminder_Number__c = 3,
+            EF_BPO_Reminder_Date__c = Datetime.now().addHours(-1),
+            EF_BPO_Business_Segment__c = 'Supplier Related',
+            EF_BPO_Request_Type__c = 'Supplier Invoice Request/Query',
+            EF_BPO_Request_Details__c = 'Missing PO'
+        );
+        insert testCase2;
+        
 
         //Create BU Mapping Record
         EF_BPO_BU_Product_Mapping__c buMapping = new EF_BPO_BU_Product_Mapping__c();

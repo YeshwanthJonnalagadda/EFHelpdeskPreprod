@@ -1,5 +1,6 @@
 /*
 *   AIM: To send the reminder to on Pending non Tours tickets.
+*   26/06/2026 : Removed null pointer exception on latest email.
 */
 
 public class SendNonToursTicketReminderEmail implements Database.Batchable<SObject> {
@@ -14,7 +15,7 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
         for(EF_BPO_BU_Product_Mapping__c eachBUMapping: [SELECT Id, Business_Unit__c, Finance_Manager_Email__c FROM EF_BPO_BU_Product_Mapping__c WHERE Business_Unit__c != NULL]){
             this.companyCodeFMEmailMap.put(eachBUMapping.Business_Unit__c, eachBUMapping.Finance_Manager_Email__c);
         }
-        /* commented out as they no longer GPO in reminders
+        /* commented out as they no longer need GPO in reminders
         S2P_GPO_Setting__mdt gpo = 	S2P_GPO_Setting__mdt.getInstance('Default');
         this.gpoEmailAddress = gpo.Email__c;
         */
@@ -23,8 +24,8 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
 
     public Database.QueryLocator start(Database.BatchableContext bc) {
         return Database.getQueryLocator([SELECT Id, SuppliedEmail, ContactId, Subject, CaseNumber, First_Name_Auto_Response__c, Agents_First_Name__c,
-                                        EF_BPO_Reminder_Date__c, EF_BPO_Reminder_Number__c, ContactEmail, Approver__r.Email, EF_BPO_Business_Unit__c
-                                        FROM Case WHERE EF_BPO_Is_eligible_for_nontours_reminder__c = true]);
+                                        EF_BPO_Reminder_Date__c, EF_BPO_Reminder_Number__c, ContactEmail, Approver__r.Email, EF_BPO_Business_Unit__c,
+                                        Case_Description__c FROM Case WHERE EF_BPO_Is_eligible_for_nontours_reminder__c = true]);
     }
 
     public void execute(Database.BatchableContext bContext, List<Case>cases){
@@ -60,19 +61,31 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
         List<Messaging.SingleEmailMessage> emailList = new List<Messaging.SingleEmailMessage>();
         List<Case> casesToUpdate = new List<Case>();
         for(Case eachCase: cases){
-            List<String> ccAddressList = new List<String>();
             Id fromAddressId = orgWideEmailAddressesMap.get('ef.bpo.service.support@ef.com').Id;
-            String fmEamilAddress = companyCodeFMEmailMap.get(eachCase.EF_BPO_Business_Unit__c);
+            List<String> ccAddressList = new List<String>();
+            ccAddressList.add(companyCodeFMEmailMap.get(eachCase.EF_BPO_Business_Unit__c));
             string agentsName = eachCase.Agents_First_Name__c <> Null ? eachCase.Agents_First_Name__c : 'GEC Support Team';
-            ccAddressList.add(fmEamilAddress);
-            /* commented out as they no longer GPO in reminders
+            
+            /* commented out as they no longer need GPO in reminders
             if(eachCase.EF_BPO_Reminder_Number__c == 3){
                 ccAddressList.add(gpoEmailAddress);
             }
             */
             String threadToken = EmailMessages.getFormattedThreadingToken(eachCase.Id);
-            EmailMessage latestEmail = sortedcaseIdToEmailListMap.get(eachCase.Id)[sortedcaseIdToEmailListMap.get(eachCase.Id).size()-1];
+            EmailMessage latestEmail = sortedcaseIdToEmailListMap.containsKey(eachCase.Id) && !sortedcaseIdToEmailListMap.get(eachCase.Id).isEmpty() ? sortedcaseIdToEmailListMap.get(eachCase.Id)[sortedcaseIdToEmailListMap.get(eachCase.Id).size()-1] : Null;
             String subject  =   'Auto reminder '+eachCase.EF_BPO_Reminder_Number__c+': '+eachCase.CaseNumber+' - '+eachCase.Subject;
+            String originalEmail;
+            if(latestEmail != Null){
+                originalEmail = '<b>From: </b>'+latestEmail.FromAddress+'<br/>' +
+                                '<b>Sent: </b>'+latestEmail.CreatedDate+'<br/>' +
+                                '<b>To: </b>'+latestEmail.ToAddress+'<br/>' +
+                                '<b>Subject: </b>'+latestEmail.Subject+'<br /><br/>' +
+                                +latestEmail.HtmlBody+'<br/>'+
+                                +threadToken;
+            } else {
+                originalEmail = +eachCase.Case_Description__c+'<br/>'+
+                                +threadToken;
+            }
             String htmlBody =   '<br/>Dear '+eachCase.First_Name_Auto_Response__c+',<br/>' + 
                                 '<br/>We are writing to following up on request '+eachCase.CaseNumber+'.<br/>' +
                                 '<br/>We would appreciate if you could provide an update or let us know if any further information is needed from our side to assist with resolution.<br/>' +
@@ -81,14 +94,9 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
                                 +agentsName+'<br/>' +
                                 '<br/>' +
                                 '--------------------------------------------------Original Email -----------------------------------------------------------<br/><br/>' +
-                                '<b>From: </b>'+latestEmail.FromAddress+'<br/>' +
-                                '<b>Sent: </b>'+latestEmail.CreatedDate+'<br/>' +
-                                '<b>To: </b>'+latestEmail.ToAddress+'<br/>' +
-                                '<b>Subject: </b>'+latestEmail.Subject+'<br /><br/>' +
-                                +latestEmail.HtmlBody+'<br/>'+
-                                +threadToken;
+                                originalEmail;
             
-            //Contrust Email Message
+            //Contrust Email Message 
             Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
             message.setWhatId(eachCase.Id);
             message.setOrgWideEmailAddressId(fromAddressId);
