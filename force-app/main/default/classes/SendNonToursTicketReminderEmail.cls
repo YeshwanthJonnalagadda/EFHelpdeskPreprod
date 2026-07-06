@@ -101,7 +101,7 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
             message.setWhatId(eachCase.Id);
             message.setOrgWideEmailAddressId(fromAddressId);
             message.setToAddresses(new List<String>{eachCase.ContactEmail});
-            if(ccAddressList.size()>0){
+            if(!ccAddressList.isEmpty()){
                 message.setCcAddresses(ccAddressList);
             }
             message.setSaveAsActivity(true);
