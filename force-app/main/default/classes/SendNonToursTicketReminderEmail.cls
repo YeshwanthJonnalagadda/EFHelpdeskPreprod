@@ -63,7 +63,11 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
         for(Case eachCase: cases){
             Id fromAddressId = orgWideEmailAddressesMap.get('ef.bpo.service.support@ef.com').Id;
             List<String> ccAddressList = new List<String>();
-            ccAddressList.add(companyCodeFMEmailMap.get(eachCase.EF_BPO_Business_Unit__c));
+            string financeManagerEmail = companyCodeFMEmailMap.get(eachCase.EF_BPO_Business_Unit__c);
+            if(financeManagerEmail != Null){
+                ccAddressList.add(companyCodeFMEmailMap.get(eachCase.EF_BPO_Business_Unit__c));
+            }
+            
             string agentsName = eachCase.Agents_First_Name__c <> Null ? eachCase.Agents_First_Name__c : 'GEC Support Team';
             
             /* commented out as they no longer need GPO in reminders
