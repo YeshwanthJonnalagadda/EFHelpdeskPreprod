@@ -31,9 +31,11 @@ public class SendAtlasTicketReminderEmail implements Database.Batchable<Sobject>
         for(Case c:cases){
             caseIds.add(c.Id);
         }
+        //All emails excluding bounces and drafts
         List<EmailMessage> allEmailMessages = [SELECT Id, ParentId, CcAddress, ToAddress, FromAddress, 
                                                 CreatedDate, HtmlBody, TextBody, Subject FROM EmailMessage 
-                                                WHERE ParentId IN:caseIds];
+                                                WHERE ParentId IN:caseIds AND Status != '5' AND 
+                                                FromName != 'Mail Delivery System'];
         
         //Contruct emailRoutingAddress Set
         Set<String> emailRoutingAddressesSet = new Set<String>();

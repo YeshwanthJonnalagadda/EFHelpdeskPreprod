@@ -34,9 +34,11 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
         for(Case c:cases){
             caseIds.add(c.Id);
         }
+        //All emails excluding bounces and drafts
         List<EmailMessage> allEmailMessages = [SELECT Id, ParentId, CcAddress, ToAddress, FromAddress, 
                                                 CreatedDate, HtmlBody, TextBody, Subject FROM EmailMessage 
-                                                WHERE ParentId IN:caseIds];
+                                                WHERE ParentId IN:caseIds AND Status != '5' AND
+                                                FromName != 'Mail Delivery System'];
 
         //Construct caseIdToEmailListMap
         Map<String, List<EmailMessage>> caseIdToEmailListMap = new Map<String, List<EmailMessage>>();
