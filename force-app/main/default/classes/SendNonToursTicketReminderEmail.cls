@@ -23,8 +23,8 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
     }
 
     public Database.QueryLocator start(Database.BatchableContext bc) {
-        return Database.getQueryLocator([SELECT Id, SuppliedEmail, ContactId, Subject, CaseNumber, First_Name_Auto_Response__c, Agents_First_Name__c,
-                                        EF_BPO_Reminder_Date__c, EF_BPO_Reminder_Number__c, ContactEmail, Approver__r.Email, EF_BPO_Business_Unit__c,
+        return Database.getQueryLocator([SELECT Id, SuppliedEmail, ContactId, ContactEmail, Contact.FirstName, Subject, CaseNumber, Agents_First_Name__c, 
+                                        EF_BPO_Reminder_Date__c, EF_BPO_Reminder_Number__c, Approver__r.Email, EF_BPO_Business_Unit__c,
                                         Case_Description__c FROM Case WHERE EF_BPO_Is_eligible_for_nontours_reminder__c = true]);
     }
 
@@ -80,6 +80,7 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
             String threadToken = EmailMessages.getFormattedThreadingToken(eachCase.Id);
             EmailMessage latestEmail = sortedcaseIdToEmailListMap.containsKey(eachCase.Id) && !sortedcaseIdToEmailListMap.get(eachCase.Id).isEmpty() ? sortedcaseIdToEmailListMap.get(eachCase.Id)[sortedcaseIdToEmailListMap.get(eachCase.Id).size()-1] : Null;
             String subject  =   'Auto reminder '+eachCase.EF_BPO_Reminder_Number__c+': '+eachCase.CaseNumber+' - '+eachCase.Subject;
+            String conFirstName = eachCase.Contact.FirstName <> Null ? eachCase.Contact.FirstName : 'Requester';
             String originalEmail;
             if(latestEmail != Null){
                 originalEmail = '<b>From: </b>'+latestEmail.FromAddress+'<br/>' +
@@ -92,7 +93,7 @@ public class SendNonToursTicketReminderEmail implements Database.Batchable<SObje
                 originalEmail = +eachCase.Case_Description__c+'<br/>'+
                                 +threadToken;
             }
-            String htmlBody =   '<br/>Dear '+eachCase.First_Name_Auto_Response__c+',<br/>' + 
+            String htmlBody =   '<br/>Dear '+conFirstName+',<br/>' + 
                                 '<br/>We are writing to following up on request '+eachCase.CaseNumber+'.<br/>' +
                                 '<br/>We would appreciate if you could provide an update or let us know if any further information is needed from our side to assist with resolution.<br/>' +
                                 '<br/>Looking forward to your response.<br/><br/>' +
