@@ -7,20 +7,7 @@ public class CaseTriggerHandler extends TriggerHandler {
     
     //Handle before insert
     public override void beforeInsert() {
-        Set<Id>amsRecordTypeIds = (new Map<Id, SObject>(getAMSrecordTypeIds())).keySet();
-        List<Case> efAmsCases = new List<Case>();
-
         AgentActivityTracker.updateActivityDate(Trigger.new);
-        
-        for(Case eachCase:(List<Case>)Trigger.new){
-            //EF AMS
-            if(eachCase.RecordTypeId != null && amsRecordTypeIds.contains(eachCase.RecordTypeId)){
-                efAmsCases.add(eachCase);
-            }
-        }
-        if(efAmsCases.size() > 0){
-            EfAmsCaseTriggerHelper.calculateSLORemainingTime(efAmsCases);
-        }
     }
 
     //Handle after insert
@@ -66,7 +53,6 @@ public class CaseTriggerHandler extends TriggerHandler {
             }
         }
         if(efAmsCases.size() > 0){
-            EfAmsCaseTriggerHelper.calculateSLORemainingTime(efAmsCases);
             EfAmsCaseTriggerHelper.updateStatusChangedDate(efAmsCases, (Map<Id,Case>)Trigger.oldMap);
             TicketHistoryHandler.trackTicketFieldChanges(efAmsCases, (Map<Id,Case>)Trigger.oldMap);
         }
