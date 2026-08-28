@@ -104,5 +104,26 @@ public class EfBpoCommonTest {
         update testCase;
         Test.stopTest();
     }
+
+    @isTest
+    static void testHandleAfterInsertForEF() {
+        // Start test context
+        Test.startTest();
+        RecordType recordType = [SELECT Id FROM RecordType WHERE DeveloperName = 'EF_BPO_Ticket' AND SObjectType = 'Case' LIMIT 1];
+        // Create test case
+        Case testCase = new Case(
+            Subject = 'Test Case',
+            Status = 'New',
+            Origin = 'SF',
+            Priority = 'High',
+            RecordTypeId = recordType.Id,
+            SuppliedEmail = 'Demo.Test@yahoo.com'
+        );
+        insert testCase; 
+        testCase.Status = 'Pending';
+        testCase.Priority = 'Urgent';
+        update testCase;
+        Test.stopTest();
+    }
     
 }
